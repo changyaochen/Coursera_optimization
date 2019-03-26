@@ -33,11 +33,15 @@ class BranchAndBound(object):
         self.values = [x.value for x in self.items]
         self.weights = [x.weight for x in self.items]
         self.current_max = 0
+        self.possible_max = [sum(self.values)] * self.item_count
         self.taken = [0] * self.item_count
 
         # let's take the greedy method
         self.back_mapping = {i: i for i in range(self.item_count)}
         self._sort_by_density()
+        # self._sort_by_weight()
+        print(self.values)
+        print(self.possible_max)
 
     def _parse_line(self, item_count: int, lines: List[str]):
 
@@ -58,6 +62,33 @@ class BranchAndBound(object):
         self.weights = [x[2] for x in lst]
         for i in range(self.item_count):
             self.back_mapping[i] = lst[i][0]
+        
+        def _get_possible_max(values, weights, capacity):
+            # calculate maximum possible value
+            total_value, total_weight = 0, 0
+            for i in range(len(values) - 1):
+                if total_weight < capacity:
+                    total_weight += weights[i]
+                    total_value += values[i]
+            # add one last item, as a whole
+            return total_value + values[i]
+
+        for i in range(self.item_count - 1):
+            self.possible_max[i] = _get_possible_max(
+                self.values[i:],
+                self.weights[i:],
+                self.capacity
+            )
+
+    def _sort_by_weight(self):
+        """Sort the items by weight"""
+        lst = [(i, v, w) for i, v, w in zip(
+            list(range(self.item_count)), self.values, self.weights)]
+        lst = sorted(lst, key=lambda x: x[2])
+        self.values = [x[1] for x in lst]
+        self.weights = [x[2] for x in lst]
+        for i in range(self.item_count):
+            self.back_mapping[i] = lst[i][0]
 
     def dfs(self, 
             idx: int, remaining_cap: int, remaining_value: int,
@@ -72,10 +103,13 @@ class BranchAndBound(object):
 
         if len(values) == 0:
             # base case, no more item
+            # print('No item left.')
             return
         
-        if remaining_value + current_value < self.current_max:  
+        # if remaining_value + current_value < self.current_max:
+        if self.possible_max[idx] + current_value < self.current_max:  
             # early stopping
+            # print('The best possible solution is worse than existing one.')
             return
 
         # recursive calls
@@ -85,19 +119,18 @@ class BranchAndBound(object):
         
         # option 1, take it, if allowed
         if (remaining_cap - weight) >= 0:  # there is capacity left for it
+            # print('\n===> In option 1, idx ', idx)
             current_taken[idx] = 1
             if current_value + value >= self.current_max:  # better solution
                 self.current_max = current_value + value
                 self.taken = current_taken[:]
                 # print('\nfound a better solution of {}'
-                #     .format(current_value + value))
+                #       .format(current_value + value))
                 # print('taken items {}'.format(self.taken))
             # keep going
             self.dfs(idx + 1, remaining_cap - weight, remaining_value,
                      values[1:], weights[1:], 
                      current_taken, current_value + value)
-        else:  # no capacity left, we are done
-            return
 
         # option 2, don't take it
         # print('\n===> In opition 2, idx ', idx)
@@ -121,7 +154,6 @@ class BranchAndBound(object):
                  init_values, init_weights, init_taken, 0)
 
         # remap back to the original index
-        print(self.taken)
         new_taken = [0] * self.item_count
         for i in range(self.item_count):
             new_taken[self.back_mapping[i]] = self.taken[i]
@@ -267,7 +299,6 @@ def solve_it(input_data):
         bb = BranchAndBound(item_count, capacity, lines)
         bb.run()
         value, taken = bb.current_max, bb.taken
-        print(bb.back_mapping)
     
     # prepare the solution in the specified output format
     output_data = str(value) + ' ' + str(0) + '\n'
@@ -282,21 +313,23 @@ if __name__ == '__main__':
     if len(sys.argv) > 1:
         file_location = sys.argv[1].strip()
         file_locations = [file_location]
-    else:
+    else:  # test cases
         # print('This test requires an input file.  Please select one from the'
         #       ' data directory. (i.e. python solver.py ./data/ks_4_0)')
         file_locations = ['./data/' + x for x in os.listdir('./data')]
         file_locations = [
-            # './data/ks_4_0', 
+            './data/ks_4_0', 
             # './data/ks_lecture_dp_2', 
-            './data/ks_19_0', 
-            './data/ks_30_0',
+            # './data/ks_19_0', 
+            # './data/ks_30_0',
+            # './data/ks_50_0'
         ]
         answers = [
-            # 19, 
+            19, 
             # 44,
-            12248, 
-            99798,
+            # 12248, 
+            # 99798,
+            # 142156
         ]
 
     for i, f in enumerate(file_locations):
