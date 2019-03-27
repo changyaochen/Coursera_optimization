@@ -20,9 +20,9 @@ class BranchAndBound(object):
         item_count: int,
         capacity: int,
         lines: List[str],
-        timeout: int = 600):
+        timeout: int = 1200):
 
-        sys.setrecursionlimit(10000)  # default is 1,000
+        sys.setrecursionlimit(100000)  # default is 1,000
        
         self.item_count = item_count
         self.capacity = capacity
@@ -40,8 +40,6 @@ class BranchAndBound(object):
         self.back_mapping = {i: i for i in range(self.item_count)}
         self._sort_by_density()
         # self._sort_by_weight()
-        print(self.values)
-        print(self.possible_max)
 
     def _parse_line(self, item_count: int, lines: List[str]):
 
@@ -66,12 +64,18 @@ class BranchAndBound(object):
         def _get_possible_max(values, weights, capacity):
             # calculate maximum possible value
             total_value, total_weight = 0, 0
-            for i in range(len(values) - 1):
-                if total_weight < capacity:
+            for i in range(len(values)):
+                if total_weight + weights[i] <= capacity:
                     total_weight += weights[i]
                     total_value += values[i]
-            # add one last item, as a whole
-            return total_value + values[i]
+                else:
+                    break
+            # add the fraction of last item
+            if i < len(values) - 1:  # not all the items are filled 
+                total_value += values[i] * \
+                    (capacity - total_weight) / weights[i]
+
+            return total_value
 
         for i in range(self.item_count - 1):
             self.possible_max[i] = _get_possible_max(
@@ -251,7 +255,6 @@ def dp_solver_2(
     taken = [0] * item_count
 
     # matrix for capacity (r) x item_count (c)
-    n_cols = (1 + item_count)
     n_rows = capacity + 1
     print('initing dp array')
     dp_old = [0] * n_rows
@@ -291,7 +294,7 @@ def solve_it(input_data):
     item_count = int(firstLine[0])
     capacity = int(firstLine[1])
 
-    if item_count * capacity <= 0e10:
+    if item_count * capacity <= 30e6:
         print('Using DP...')
         value, taken = dp_solver(item_count, capacity, lines)
     else:
@@ -319,17 +322,17 @@ if __name__ == '__main__':
         file_locations = ['./data/' + x for x in os.listdir('./data')]
         file_locations = [
             './data/ks_4_0', 
-            # './data/ks_lecture_dp_2', 
-            # './data/ks_19_0', 
-            # './data/ks_30_0',
-            # './data/ks_50_0'
+            './data/ks_lecture_dp_2', 
+            './data/ks_19_0', 
+            './data/ks_30_0',
+            './data/ks_50_0'
         ]
         answers = [
             19, 
-            # 44,
-            # 12248, 
-            # 99798,
-            # 142156
+            44,
+            12248, 
+            99798,
+            142156
         ]
 
     for i, f in enumerate(file_locations):
